@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.unl.cse.netgroup;
+package org.unl.cse.netgroup.rest;
 
 import org.onlab.rest.AbstractWebApplication;
 

@@ -13,31 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.unl.cse.netgroup;
+package org.unl.cse.netgroup.cli;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.onosproject.rest.AbstractWebResource;
-
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.core.Response;
+import org.apache.karaf.shell.commands.Command;
+import org.onosproject.cli.AbstractShellCommand;
 
 /**
- * Flows App web resource.
+ * Sample Flows App CLI command
  */
-@Path("sample")
-public class FlowsAppWebResource extends AbstractWebResource {
+@Command(scope = "flows-app", name = "info",
+         description = "Sample Flows App CLI command")
+public class FlowsAppCommand extends AbstractShellCommand {
 
-    /**
-     * Get hello flowsApp greeting.
-     *
-     * @return 200 OK
-     */
-    @GET
-    @Path("")
-    public Response getGreeting() {
-        ObjectNode node = mapper().createObjectNode().put("hello", "flowsApp");
-        return ok(node).build();
+    @Override
+    protected void execute() {
+        print("Hello %s", "from Flows App!");
     }
 
 }
