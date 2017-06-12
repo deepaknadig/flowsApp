@@ -29,7 +29,7 @@
         <onos.version>1.10.0</onos.version>
         <api.version>1.0.0</api.version>
         <!-- Uncomment to generate ONOS app from this module. -->
-        <onos.app.name>org.unl.cse.netgroup</onos.app.name>
+        <onos.app.name>org.unl.cse.netgroup.flowsapp</onos.app.name>
         <onos.app.title>ONOS Flows App</onos.app.title>
         <onos.app.origin>Netgroup, University of Nebraska-Lincoln.</onos.app.origin>
         <onos.app.category>default</onos.app.category>
@@ -37,7 +37,7 @@
         <web.context>/onos/flowsapp</web.context>
         <api.title>ONOS Flows App REST API</api.title>
         <onos.app.url>http://cse.unl.edu/~netgroup</onos.app.url>
-        <api.package>org.unl.cse.netgroup</api.package>
+        <api.package>org.unl.cse.netgroup.flowsapp</api.package>
         <onos.app.readme>ONOS Flows Testing Aplication</onos.app.readme>
         <!-- -->
     </properties>

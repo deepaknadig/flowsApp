@@ -29,13 +29,13 @@ public class AppComponentTest {
     @Before
     public void setUp() {
         component = new FlowsApp();
-        component.activate();
+//        component.activate();
 
     }
 
     @After
     public void tearDown() {
-        component.deactivate();
+//        component.deactivate();
     }
 
     @Test
