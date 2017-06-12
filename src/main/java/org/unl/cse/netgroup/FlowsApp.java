@@ -25,15 +25,20 @@ import org.onlab.packet.IPv4;
 import org.onlab.packet.MacAddress;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
+import org.onosproject.net.DeviceId;
 import org.onosproject.net.flow.DefaultTrafficSelector;
+import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleEvent;
 import org.onosproject.net.flow.FlowRuleListener;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
+import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.EthCriterion;
+import org.onosproject.net.flowobjective.DefaultForwardingObjective;
 import org.onosproject.net.flowobjective.FlowObjectiveService;
+import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.meter.MeterService;
 import org.onosproject.net.packet.PacketContext;
 import org.onosproject.net.packet.PacketProcessor;
@@ -108,7 +113,28 @@ public class FlowsApp {
     }
 
     private void processIPPacket(PacketContext packetContext, Ethernet ethernet) {
-    }
+        DeviceId deviceId = packetContext.inPacket().receivedFrom().deviceId();
+        MacAddress src = ethernet.getSourceMAC();
+        MacAddress dst = ethernet.getDestinationMAC();
+
+        // Create a traffic selector
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+                .matchEthSrc(src).matchEthDst(dst).build();
+
+        // Define how to treat traffic
+        TrafficTreatment drop = DefaultTrafficTreatment.builder()
+                .drop().build();
+
+        // Add the flow
+        flowObjectiveService.forward(deviceId, DefaultForwardingObjective.builder()
+                .fromApp(applicationId)
+                .withSelector(selector)
+                .withTreatment(drop)
+                .withFlag(ForwardingObjective.Flag.VERSATILE)
+                .withPriority(PRIORITY)
+                .makeTemporary(TIMEOUT_SEC)
+                .add()
+        );}
 
     private boolean IsIPPacket(Ethernet ethernet) {
         if (ethernet.getEtherType() == Ethernet.TYPE_IPV4) {
