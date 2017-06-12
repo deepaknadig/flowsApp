@@ -33,9 +33,9 @@
         <onos.app.title>ONOS Flows App</onos.app.title>
         <onos.app.origin>Netgroup, University of Nebraska-Lincoln.</onos.app.origin>
         <onos.app.category>default</onos.app.category>
-        <api.description>Sample application REST API</api.description>
-        <web.context>/onos/flowsApp</web.context>
-        <api.title>Sample app REST API</api.title>
+        <api.description>ONOS Flows App REST API</api.description>
+        <web.context>/onos/flowsapp</web.context>
+        <api.title>ONOS Flows App REST API</api.title>
         <onos.app.url>http://cse.unl.edu/~netgroup</onos.app.url>
         <api.package>org.unl.cse.netgroup</api.package>
         <onos.app.readme>ONOS Flows Testing Aplication</onos.app.readme>
