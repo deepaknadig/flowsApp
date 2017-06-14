@@ -26,6 +26,7 @@ import org.onlab.packet.MacAddress;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
@@ -36,6 +37,8 @@ import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.EthCriterion;
+import org.onosproject.net.flow.instructions.Instruction;
+import org.onosproject.net.flow.instructions.Instructions;
 import org.onosproject.net.flowobjective.DefaultForwardingObjective;
 import org.onosproject.net.flowobjective.FlowObjectiveService;
 import org.onosproject.net.flowobjective.ForwardingObjective;
@@ -60,7 +63,7 @@ public class FlowsApp {
     // Variables for Timeouts and Flow Rule priorities
     private static final int PRIORITY = 99;
     private static final int DROP_PRIORITY =100;
-    private static final int TIMEOUT_SEC = 60;
+    private static final int TIMEOUT_SEC = 240;
 
     // String Messages
     private static final String FLOW_RULE_REMOVED = "Flow rules removed from from {} to {} on {}";
@@ -84,6 +87,9 @@ public class FlowsApp {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected MeterService meterService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
+    protected DeviceService deviceService;
 
     private final PacketProcessor packetProcessor = new IPPacketProcessor();
     private final FlowRuleListener flowRuleListener = new InternalFlowListener();
@@ -114,16 +120,46 @@ public class FlowsApp {
 
     private void processIPPacket(PacketContext packetContext, Ethernet ethernet) {
         DeviceId deviceId = packetContext.inPacket().receivedFrom().deviceId();
+        log.info("DeviceID: " + deviceId.toString());
+
         MacAddress src = ethernet.getSourceMAC();
+        log.info("MAC Src: " + src.toString());
+
         MacAddress dst = ethernet.getDestinationMAC();
+        log.info("MAC Dst: " + dst.toString());
+
+//        ConnectPoint cp = packetContext.inPacket().receivedFrom();
+//        log.info("CP_PORT_NO: " + cp.port().toString());
+//
+//
+//        log.info(String.valueOf("Number of Connected Switches: " + deviceService.getDeviceCount()));
+//
+//        List<Port> portList = deviceService.getPorts(deviceId);
+////        log.info("Port List: " + portList.toString());
+
+
+//        for(Port port : portList) {
+//            log.info(String.valueOf(port.annotations().value("portMac")));
+//            String one = port.annotations().value("portMac");
+//            String two = dst.toString();
+//            log.info("The strings are: {} and {}", one, two);
+//            if (port.annotations().value("portMac") == dst.toString()) {
+//                log.info("Send packet to Port: " + port.number().toString());
+//            }
+//        }
+
+//        PortNumber portNumber = portList.get(0).number();
+
 
         // Create a traffic selector
         TrafficSelector selector = DefaultTrafficSelector.builder()
                 .matchEthSrc(src).matchEthDst(dst).build();
 
+        Instruction instruction = Instructions.transition(1);
+
         // Define how to treat traffic
         TrafficTreatment drop = DefaultTrafficTreatment.builder()
-                .drop().build();
+                .add(instruction).build();
 
         // Add the flow
         flowObjectiveService.forward(deviceId, DefaultForwardingObjective.builder()
@@ -134,7 +170,14 @@ public class FlowsApp {
                 .withPriority(PRIORITY)
                 .makeTemporary(TIMEOUT_SEC)
                 .add()
-        );}
+        );
+
+
+        // Handle packet context
+//        packetContext.send();
+//        packetContext.block();
+
+    }
 
     private boolean IsIPPacket(Ethernet ethernet) {
         if (ethernet.getEtherType() == Ethernet.TYPE_IPV4) {
