@@ -15,6 +15,7 @@
  */
 package org.unl.cse.netgroup;
 
+import com.google.common.collect.Maps;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
@@ -25,8 +26,11 @@ import org.onlab.packet.IPv4;
 import org.onlab.packet.MacAddress;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
+import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.PortNumber;
 import org.onosproject.net.device.DeviceService;
+import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
@@ -34,20 +38,17 @@ import org.onosproject.net.flow.FlowRuleEvent;
 import org.onosproject.net.flow.FlowRuleListener;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
-import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.EthCriterion;
-import org.onosproject.net.flow.instructions.Instruction;
-import org.onosproject.net.flow.instructions.Instructions;
-import org.onosproject.net.flowobjective.DefaultForwardingObjective;
 import org.onosproject.net.flowobjective.FlowObjectiveService;
-import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.meter.MeterService;
 import org.onosproject.net.packet.PacketContext;
 import org.onosproject.net.packet.PacketProcessor;
 import org.onosproject.net.packet.PacketService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Map;
 
 import static org.onosproject.net.flow.FlowRuleEvent.Type.RULE_REMOVED;
 import static org.onosproject.net.flow.criteria.Criterion.Type.ETH_SRC;
@@ -94,6 +95,7 @@ public class FlowsApp {
     private final PacketProcessor packetProcessor = new IPPacketProcessor();
     private final FlowRuleListener flowRuleListener = new InternalFlowListener();
 
+    protected Map<DeviceId, Map<MacAddress, PortNumber>> macTables = Maps.newConcurrentMap();
 
     private class IPPacketProcessor implements PacketProcessor{
         @Override
@@ -122,11 +124,44 @@ public class FlowsApp {
         DeviceId deviceId = packetContext.inPacket().receivedFrom().deviceId();
         log.info("DeviceID: " + deviceId.toString());
 
-        MacAddress src = ethernet.getSourceMAC();
+        MacAddress src = packetContext.inPacket().parsed().getSourceMAC();
         log.info("MAC Src: " + src.toString());
 
-        MacAddress dst = ethernet.getDestinationMAC();
+        MacAddress dst = packetContext.inPacket().parsed().getDestinationMAC();
         log.info("MAC Dst: " + dst.toString());
+
+        ConnectPoint cp = packetContext.inPacket().receivedFrom();
+
+        macTables.putIfAbsent(cp.deviceId(),Maps.newConcurrentMap());
+
+        // Create a MAC Table Map
+        Map<MacAddress, PortNumber> macTable = macTables.get(cp.deviceId());
+
+        macTable.put(src, cp.port());
+        PortNumber outPort = macTable.get(dst);
+        log.info("Output Port: " + outPort);
+        log.info(macTable.toString());
+
+        // Find the port associated with the dst MAC address
+        if (outPort != null) {
+            packetContext.treatmentBuilder().setOutput(outPort);
+            FlowRule flowRule = DefaultFlowRule.builder()
+                    .withSelector(DefaultTrafficSelector.builder().matchEthDst(dst).build())
+                    .withTreatment(DefaultTrafficTreatment.builder().setOutput(outPort).build())
+                    .forDevice(cp.deviceId())
+                    .forTable(1)
+                    .makeTemporary(120)
+                    .withPriority(100)
+                    .fromApp(applicationId)
+                    .build();
+
+            flowRuleService.applyFlowRules(flowRule);
+            packetContext.send();
+
+
+        } else {
+            packetContext.block();
+        }
 
 //        ConnectPoint cp = packetContext.inPacket().receivedFrom();
 //        log.info("CP_PORT_NO: " + cp.port().toString());
@@ -152,25 +187,25 @@ public class FlowsApp {
 
 
         // Create a traffic selector
-        TrafficSelector selector = DefaultTrafficSelector.builder()
-                .matchEthSrc(src).matchEthDst(dst).build();
-
-        Instruction instruction = Instructions.transition(1);
-
-        // Define how to treat traffic
-        TrafficTreatment drop = DefaultTrafficTreatment.builder()
-                .add(instruction).build();
-
-        // Add the flow
-        flowObjectiveService.forward(deviceId, DefaultForwardingObjective.builder()
-                .fromApp(applicationId)
-                .withSelector(selector)
-                .withTreatment(drop)
-                .withFlag(ForwardingObjective.Flag.VERSATILE)
-                .withPriority(PRIORITY)
-                .makeTemporary(TIMEOUT_SEC)
-                .add()
-        );
+//        TrafficSelector selector = DefaultTrafficSelector.builder()
+//                .matchEthSrc(src).matchEthDst(dst).build();
+//
+//        Instruction instruction = Instructions.transition(1);
+//
+//        // Define how to treat traffic
+//        TrafficTreatment drop = DefaultTrafficTreatment.builder()
+//                .add(instruction).build();
+//
+//        // Add the flow
+//        flowObjectiveService.forward(deviceId, DefaultForwardingObjective.builder()
+//                .fromApp(applicationId)
+//                .withSelector(selector)
+//                .withTreatment(drop)
+//                .withFlag(ForwardingObjective.Flag.VERSATILE)
+//                .withPriority(PRIORITY)
+//                .makeTemporary(TIMEOUT_SEC)
+//                .add()
+//        );
 
 
         // Handle packet context
@@ -190,7 +225,8 @@ public class FlowsApp {
 
     // Define traffic selector for IP packet to be intercepted
     private final TrafficSelector intercept = DefaultTrafficSelector.builder()
-            .matchEthType(Ethernet.TYPE_IPV4).matchIPProtocol(IPv4.PROTOCOL_ICMP)
+            .matchEthType(Ethernet.TYPE_IPV4)
+//            .matchIPProtocol(IPv4.PROTOCOL_ICMP)
             .build();
 
 
