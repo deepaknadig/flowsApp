@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "required": [
+    "flows"
+  ],
+  "properties": {
+    "flows": {
+      "type": "string",
+      "example": "some example string here"
+    }
+  }
+}

@@ -32,6 +32,7 @@ public class FlowsAppWebResource extends AbstractWebResource {
      * Get hello flowsApp greeting.
      *
      * @return 200 OK
+     * @onos.rsModel FlowsAppGet
      */
     @GET
     @Path("info")
