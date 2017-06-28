@@ -59,21 +59,21 @@ import static org.onosproject.net.flow.criteria.Criterion.Type.ETH_SRC;
 @Component(immediate = true)
 public class FlowsApp {
 
-    private final Logger log = LoggerFactory.getLogger(FlowsApp.class);
-
     // Variables for Timeouts and Flow Rule priorities
     private static final int PRIORITY = 99;
     private static final int DROP_PRIORITY =100;
     private static final int TIMEOUT_SEC = 240;
-
     // String Messages
     private static final String FLOW_RULE_REMOVED = "Flow rules removed from from {} to {} on {}";
-
-
-    // App ID variables
-    private ApplicationId applicationId;
     private static final String FLOWSAPP = "org.unl.cse.netgroup.flowsApp";
-
+    private final Logger log = LoggerFactory.getLogger(FlowsApp.class);
+    private final PacketProcessor packetProcessor = new IPPacketProcessor();
+    private final FlowRuleListener flowRuleListener = new InternalFlowListener();
+    // Define traffic selector for IP packet to be intercepted
+    private final TrafficSelector intercept = DefaultTrafficSelector.builder()
+            .matchEthType(Ethernet.TYPE_IPV4)
+//            .matchIPProtocol(IPv4.PROTOCOL_ICMP)
+            .build();
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected CoreService coreService;
 
@@ -92,35 +92,12 @@ public class FlowsApp {
     @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
     protected DeviceService deviceService;
 
-    private final PacketProcessor packetProcessor = new IPPacketProcessor();
-    private final FlowRuleListener flowRuleListener = new InternalFlowListener();
-
     protected Map<DeviceId, Map<MacAddress, PortNumber>> macTables = Maps.newConcurrentMap();
-
-    private class IPPacketProcessor implements PacketProcessor{
-        @Override
-        public void process(PacketContext packetContext) {
-            Ethernet ethernet = packetContext.inPacket().parsed();
-            if(IsIPPacket(ethernet)) {
-                processIPPacket(packetContext,ethernet);
-            }
-        }
-    }
-
-    private class InternalFlowListener implements FlowRuleListener {
-        @Override
-        public void event(FlowRuleEvent event) {
-            FlowRule rule = event.subject();
-            if (event.type() == RULE_REMOVED && rule.appId() == applicationId.id()) {
-                Criterion criterion = rule.selector().getCriterion(ETH_SRC);
-                MacAddress src = ((EthCriterion) criterion).mac();
-                MacAddress dst = ((EthCriterion) criterion).mac();
-                log.warn(FLOW_RULE_REMOVED, src, dst, rule.deviceId());
-            }
-        }
-    }
+    // App ID variables
+    private ApplicationId applicationId;
 
     private void processIPPacket(PacketContext packetContext, Ethernet ethernet) {
+
         DeviceId deviceId = packetContext.inPacket().receivedFrom().deviceId();
         log.info("DeviceID: " + deviceId.toString());
 
@@ -223,13 +200,6 @@ public class FlowsApp {
         return false;
     }
 
-    // Define traffic selector for IP packet to be intercepted
-    private final TrafficSelector intercept = DefaultTrafficSelector.builder()
-            .matchEthType(Ethernet.TYPE_IPV4)
-//            .matchIPProtocol(IPv4.PROTOCOL_ICMP)
-            .build();
-
-
     // Application Handling
     @Activate
     protected void activate() {
@@ -245,6 +215,29 @@ public class FlowsApp {
         flowRuleService.removeFlowRulesById(applicationId);
         flowRuleService.removeListener(flowRuleListener);
         log.info("FLOWS-APP Stopped");
+    }
+
+    private class IPPacketProcessor implements PacketProcessor{
+        @Override
+        public void process(PacketContext packetContext) {
+            Ethernet ethernet = packetContext.inPacket().parsed();
+            if(IsIPPacket(ethernet)) {
+                processIPPacket(packetContext,ethernet);
+            }
+        }
+    }
+
+    private class InternalFlowListener implements FlowRuleListener {
+        @Override
+        public void event(FlowRuleEvent event) {
+            FlowRule rule = event.subject();
+            if (event.type() == RULE_REMOVED && rule.appId() == applicationId.id()) {
+                Criterion criterion = rule.selector().getCriterion(ETH_SRC);
+                MacAddress src = ((EthCriterion) criterion).mac();
+                MacAddress dst = ((EthCriterion) criterion).mac();
+                log.warn(FLOW_RULE_REMOVED, src, dst, rule.deviceId());
+            }
+        }
     }
 
 }
